@@ -6,12 +6,12 @@ import (
 	"net/http"
 )
 
-type Client interface {
+type httpClient interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
 var (
-	client Client = &http.Client{}
+	client httpClient = &http.Client{}
 )
 
 // StatsResponse is the struct returned by the Stats function.
@@ -155,9 +155,9 @@ type PoolStatsResponse struct {
 		} `json:"minBlockRewards"`
 		Pending float64 `json:"pending"`
 		Price   struct {
-			Btc float64 `json:"btc"`
-			Usd float64 `json:"usd"`
-			Eur float64 `json:"eur"`
+			BTC float64 `json:"btc"`
+			USD float64 `json:"usd"`
+			EUR float64 `json:"eur"`
 		} `json:"price"`
 		CurrentEfforts struct {
 			Num2086  float64 `json:"2086"`
@@ -184,7 +184,7 @@ type PoolStatsResponse struct {
 			Num38081 float64 `json:"38081"`
 			Num48782 float64 `json:"48782"`
 		} `json:"currentEfforts"`
-		PplnsPortShares struct {
+		PPLNSPortShares struct {
 			Num8545  float64 `json:"8545"`
 			Num8766  float64 `json:"8766"`
 			Num9053  float64 `json:"9053"`
@@ -206,7 +206,7 @@ type PoolStatsResponse struct {
 			Num38081 float64 `json:"38081"`
 			Num48782 float64 `json:"48782"`
 		} `json:"pplnsPortShares"`
-		PplnsWindowTime float64 `json:"pplnsWindowTime"`
+		PPLNSWindowTime float64 `json:"pplnsWindowTime"`
 		PortHash        struct {
 			Num8545  float64 `json:"8545"`
 			Num8766  float64 `json:"8766"`
@@ -445,17 +445,28 @@ type NetworkStatsResponse struct {
 	Ts         int    `json:"ts"`
 }
 
-// Worker a historical time series of personal stats
-type Worker []struct {
+// WorkerHistory a historical time series of personal stats
+type WorkerHistory []struct {
 	Ts  int     `json:"ts"`
 	Hs  float64 `json:"hs"`
 	Hs2 float64 `json:"hs2"`
 }
 
+// WorkerStats is a struct containing current worker stats
+type WorkerStats struct {
+	Lts           int     `json:"lts"`
+	ID            string  `json:"identifer"`
+	Hash          float64 `json:"hash"`
+	Hash2         float64 `json:"hash2"`
+	TotalHash     float64 `json:"totalHash"`
+	ValidShares   int     `json:"validShares"`
+	InvalidShares int     `json:"invalidShares"`
+}
+
 // NetworkStats returns the global network stats
 func NetworkStats() (*NetworkStatsResponse, error) {
 	var networkStats *NetworkStatsResponse
-	_, err := newRequestDecode("https://api.moneroocean.stream/network/stats", &networkStats)
+	_, err := newRequestDecode("network/stats", &networkStats)
 
 	return networkStats, err
 }
@@ -463,7 +474,7 @@ func NetworkStats() (*NetworkStatsResponse, error) {
 // PoolStats returns the global pool stats
 func PoolStats() (*PoolStatsResponse, error) {
 	var poolStats *PoolStatsResponse
-	_, err := newRequestDecode("https://api.moneroocean.stream/pool/stats", &poolStats)
+	_, err := newRequestDecode("pool/stats", &poolStats)
 
 	return poolStats, err
 }
@@ -471,23 +482,33 @@ func PoolStats() (*PoolStatsResponse, error) {
 // Stats returns personal stats
 func Stats(address string) (*StatsResponse, error) {
 	var info *StatsResponse
-	_, err := newRequestDecode(fmt.Sprintf("https://api.moneroocean.stream/miner/%v/stats", address), &info)
+	_, err := newRequestDecode(fmt.Sprintf("miner/%v/stats", address), &info)
 
 	return info, err
 }
 
-// Workers returns personal worker stats
-func Workers(address string) (map[string]Worker, error) {
-	var workers map[string]Worker
-	_, err := newRequestDecode(fmt.Sprintf("https://api.moneroocean.stream/miner/%v/allWorkers", address), &workers)
+// WorkersHistory returns a historical time series of all
+// workers. The global key is an accumulation of all
+// WorkerHistory.
+func WorkersHistory(address string) (map[string]WorkerHistory, error) {
+	var workers map[string]WorkerHistory
+	_, err := newRequestDecode(fmt.Sprintf("miner/%v/allWorkers", address), &workers)
 
 	return workers, err
 }
 
+// Worker returns detailed worker stats
+func Worker(address, worker string) (WorkerStats, error) {
+	var workerStats WorkerStats
+	_, err := newRequestDecode(fmt.Sprintf("miner/%v/stats/%v", address, worker), &workerStats)
+
+	return workerStats, err
+}
+
 // newRequestDecode a small helper function to create a new request and execute it
-// with the configured Client, decoding the resulting value into v.
-func newRequestDecode(url string, v interface{}) (*http.Response, error) {
-	req, err := http.NewRequest("GET", url, nil)
+// with the configured httpClient, decoding the resulting value into v.
+func newRequestDecode(endpoint string, v interface{}) (*http.Response, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("https://api.moneroocean.stream/%v", endpoint), nil)
 	if err != nil {
 		return nil, err
 	}
