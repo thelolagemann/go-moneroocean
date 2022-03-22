@@ -51,4 +51,4 @@ func main() {
 All contributions are welcome! For any bug reports/feature requests, feel free to open an issue or submit a pull request. 
 
 ### License
-This project is licensed under the MIT license - see the [LICENSE](https://github.com/thelolagemann/go-moneroocean/blob/master/LICENSE) file for details.
+This project is licensed under the MIT license - see the [LICENSE](https://github.com/thelolagemann/go-moneroocean/blob/main/LICENSE) file for details.
